@@ -1,0 +1,231 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Description": "AWS CloudFormation Sample Template myBB_Multi_AZ: Create a highly available, scalable myBB installation",
+    
+    "Mappings": {
+        "Region2VpcCidr": {
+                            
+            
+            "us-east-1": {
+                "PrivateSubnet1Cidr": "10.1.200.0/24",
+                "PrivateSubnet2Cidr": "10.1.201.0/24",
+                "PublicSubnet1Cidr": "10.1.100.0/24",
+                "PublicSubnet2Cidr": "10.1.101.0/24",
+                "VpcCidr": "10.1.0.0/16"
+            }
+            
+        }
+    },
+   
+
+    "Parameters": {
+        
+        "NetworkName": {
+          "Description": "The name of the network that will be used to tag all resources in the VPC",
+          "Type": "String",
+          "Default": "BB-Subnet"
+        },
+
+      
+     
+  
+        "VPCAvailabilityZone1": {
+            "Default": "us-east-1a",
+            "Description": "One of two Availability Zones that will be used to create subnets.",
+            "MaxLength": "255",
+            "MinLength": "1",
+            "Type": "String"
+        },
+        "VPCAvailabilityZone2": {
+            "Default": "us-east-1b",
+            "Description": "Two of two Availability Zones that will be used to create subnets. Must be different than VPCAvailabilityZone2.",
+            "MaxLength": "255",
+            "MinLength": "1",
+            "Type": "String"
+        }
+        
+    },
+
+
+    "Resources": {
+
+        "VPC": {
+          "Type": "AWS::EC2::VPC",
+          "Properties": {
+            "CidrBlock": {
+              "Fn::FindInMap": ["Region2VpcCidr", { "Ref" : "AWS::Region" }, "VpcCidr"]
+            },
+            "Tags": [{
+              "Key": "Network",
+              "Value": { "Fn::Join" : ["-", [{ "Ref": "NetworkName" }, { "Ref": "AWS::Region" }] ]}
+            }, {
+              "Key": "Scheme",
+              "Value": "PublicAndPrivate"
+            },
+            {
+              "Key": "Name",
+              "Value": "cybage_alm_bhargav_vpc"
+            }]
+          }
+        },
+"PublicSubnet1": {
+          "Type": "AWS::EC2::Subnet",
+          "Properties": {
+            "VpcId": {
+              "Ref": "VPC"
+            },
+            "CidrBlock": {
+              "Fn::FindInMap": ["Region2VpcCidr", { "Ref" : "AWS::Region" }, "PublicSubnet1Cidr"]
+            },
+            "MapPublicIpOnLaunch" : true,
+            "AvailabilityZone": {
+              "Ref": "VPCAvailabilityZone1"
+            },
+            "Tags": [{
+              "Key": "Network",
+              "Value": { "Fn::Join" : ["-", [{ "Ref": "NetworkName" }, { "Ref": "AWS::Region" }] ]}
+            }, {
+              "Key": "Network",
+              "Value": "Public"
+            },
+			{
+              "Key": "Name",
+              "Value": "cybage_alm_bhargav_publicsubnet"
+            }]
+          }
+        },
+
+        "PublicSubnet2": {
+          "Type": "AWS::EC2::Subnet",
+          "Properties": {
+            "VpcId": {
+              "Ref": "VPC"
+            },
+            "CidrBlock": {
+              "Fn::FindInMap": ["Region2VpcCidr", { "Ref" : "AWS::Region" }, "PublicSubnet2Cidr"]
+            },
+            "MapPublicIpOnLaunch" : true,
+            "AvailabilityZone": {
+              "Ref": "VPCAvailabilityZone2"
+            },
+            "Tags": [{
+              "Key": "Network",
+              "Value": { "Fn::Join" : ["-", [{ "Ref": "NetworkName" }, { "Ref": "AWS::Region" }] ]}
+            }, {
+              "Key": "Network",
+              "Value": "Public"
+            },
+			{
+              "Key": "Name",
+              "Value": "cybage_alm_bhargav_publicsubnet2"
+            }]
+          }
+        },
+"InternetGateway": {
+          "Type": "AWS::EC2::InternetGateway",
+          "Properties": {
+            "Tags": [{
+              "Key": "Network",
+              "Value": { "Fn::Join" : ["-", [{ "Ref": "NetworkName" }, { "Ref": "AWS::Region" }] ]}
+            }, {
+              "Key": "Network",
+              "Value": "Public"
+            },
+			{
+              "Key": "Name",
+              "Value": "cybage_alm_bhargav_internetgateway"
+            }]
+          }
+        },
+
+        "GatewayToInternet": {
+          "Type": "AWS::EC2::VPCGatewayAttachment",
+          "Properties": {
+            "VpcId": {
+              "Ref": "VPC"
+            },
+            "InternetGatewayId": {
+              "Ref": "InternetGateway"
+            }
+          }
+        },
+
+        "PublicRouteTable": {
+          "Type": "AWS::EC2::RouteTable",
+          "Properties": {
+            "VpcId": {
+              "Ref": "VPC"
+            },
+            "Tags": [{
+              "Key": "Network",
+              "Value": { "Fn::Join" : ["-", [{ "Ref": "NetworkName" }, { "Ref": "AWS::Region" }] ]}
+            }, {
+              "Key": "Network",
+              "Value": "Public"
+            },
+			{
+              "Key": "Name",
+              "Value": "cybage_alm_bhargav_publicroutetable"
+            }]
+          }
+        },
+
+        "PublicRoute": {
+          "Type": "AWS::EC2::Route",
+          "DependsOn": "GatewayToInternet",
+          "Properties": {
+            "RouteTableId": {
+              "Ref": "PublicRouteTable"
+            },
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "GatewayId": {
+              "Ref": "InternetGateway"
+            }
+          }
+        },
+
+        "PublicSubnet1RouteTableAssociation": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {
+              "Ref": "PublicSubnet1"
+            },
+            "RouteTableId": {
+              "Ref": "PublicRouteTable"
+            }
+          }
+        },
+
+        "PublicSubnet2RouteTableAssociation": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": {
+              "Ref": "PublicSubnet2"
+            },
+            "RouteTableId": {
+              "Ref": "PublicRouteTable"
+            }
+          }
+        },
+		
+	"instance" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+          
+          "ImageId" : "ami-aa2ea6d0" ,
+          "SubnetId" : { "Ref" : "PublicSubnet1" },
+          "InstanceType" : "t2.micro" ,
+        "KeyName" : "bhargav123" ,
+        "Tags" : [ {
+              "Key": "Name",
+              "Value": "cybage_alm_bhargav_publicroutetable"
+            }  ]
+                        }
+    }
+      }
+
+		
+    
+
+}

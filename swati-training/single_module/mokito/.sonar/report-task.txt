@@ -1,0 +1,5 @@
+projectKey=training-demo
+serverUrl=http://172.27.59.80:9005
+dashboardUrl=http://172.27.59.80:9005/dashboard/index/training-demo
+ceTaskId=AWFQxhWY9Wu3NwYHJbc4
+ceTaskUrl=http://172.27.59.80:9005/api/ce/task?id=AWFQxhWY9Wu3NwYHJbc4
